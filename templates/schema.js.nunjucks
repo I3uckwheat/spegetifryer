@@ -1,0 +1,77 @@
+const {
+  GraphQLBoolean,
+  GraphQLFloat,
+  GraphQLInt,
+  GraphQLList,
+  GraphQLObjectType,
+  GraphQLString,
+} = require('graphql');
+
+const joinMonster = require('join-monster').default;
+
+const db = require('../db2Handler');
+const graphQLHelpers = require('../graphQLHelpers');
+
+const customResolvers = require('../../{{ name }}/{{ name }}')(db);
+
+const fields = graphQLHelpers.buildColumnFields({
+  {%- for column, dataType in columns %}
+  {{ column }}: "{{ dataType }}",
+  {%- endfor %}
+});
+
+const {{ name }} = exports.{{ name }} = new GraphQLObjectType({
+  name: "{{ name }}",
+  fields: () => ({
+    ...fields,
+    {%- for relation in relations %}
+    {{ relation.table }}: {
+      description: "{{ name }} description",
+      type: {{ relation.returnType }},
+      {%- if relation.junction %}
+      junction: {
+        sqlTable: '{{ relation.junction.junctionTable }}',
+        sqlJoins: [
+          // first the parent table to the junction
+          (followerTable, junctionTable, args) => "{{ relation.junction.parent }}",
+          // then the junction to the child
+          (junctionTable, followeeTable, args) => "{{ relation.junction.child }}",
+        ],
+      },
+      {% else %}
+      sqlJoin: ({{ name }}Table, {{ relation.table }}Table, args) => "{{ relation.joinOn }}",
+      {% endif %}
+    },
+    {%- endfor %}
+    ...customResolvers
+  })
+})
+
+{{ name }}._typeConfig = {
+  sqlTable: "{{ library }}.{{ name }}",
+  uniqueKey: {{ uniqueKey|safe }},
+}
+
+const {{ name }}Resolver = exports.{{ name }}Resolver = {
+  {{ name }}: {
+    type: new GraphQLList({{ name }}),
+    {# allow table columns to be used as GraphQL args #}
+    args: {
+      where: { type: GraphQLString },
+      by: { type: GraphQLString },
+      {%- for column, dataType in columns %}
+      {{ column }}: { type: {{ dataType }} },
+      {%- endfor %}
+    },
+    where: (table, args) => graphQLHelpers.buildConditionsByArgs(args),
+    orderBy: (args) => graphQLHelpers.buildSqlOrderBy(args),
+    resolve: (parent, args, context, info) =>
+      joinMonster(info, context, sql => db.prepareExecute(sql + " FETCH FIRST 100 ROWS ONLY"), [])
+  }
+}
+
+{%- for relation in relations %}
+const {
+  {{ relation.table }}
+} = require('../{{ relation.table }}/{{ relation.table }}')
+{%- endfor %}

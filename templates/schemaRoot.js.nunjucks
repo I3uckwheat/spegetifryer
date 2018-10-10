@@ -1,0 +1,22 @@
+const {
+  GraphQLObjectType,
+  GraphQLSchema
+} = require('graphql');
+
+{% for name in tableNames -%}
+const { {{ name }}Resolver } = require('./.generated/{{ name }}/{{ name }}')
+{% endfor %}
+const queryRoot = new GraphQLObjectType({
+  description: 'global query object',
+  name: 'Query',
+  fields: () => ({
+    {%- for name in tableNames %}
+    ...{{ name }}Resolver,
+    {%- endfor %}
+  })
+});
+
+module.exports = new GraphQLSchema({
+  description: 'ComEdge Schema',
+  query: queryRoot
+});

@@ -1,0 +1,18 @@
+{
+  "name": "graphql-spegetifryer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "bin": {
+    "spegetifry": "./spegetifryer.js"
+  },
+  "dependencies": {
+    "find-config": "^1.0.0",
+    "nunjucks": "^3.1.3"
+  }
+}
