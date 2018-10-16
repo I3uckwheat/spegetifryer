@@ -48,6 +48,8 @@ exports.buildConditionsByArgs = (args) => {
 }
 
 exports.buildSqlOrderBy = (args) => {
+  if (!args.by) return null;
+
   return args.by
     .split(', ')
     .reduce((acc, predicate) => {
