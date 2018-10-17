@@ -14,6 +14,7 @@ const joinMonster = require('join-monster').default;
 
 const db = require('../db2Handler');
 const graphQLHelpers = require('../graphQLHelpers');
+
 const tableDependencies = {
   self: require(path.join(__dirname, 'columns.json')),
   {%- for relation in relations %}
@@ -78,8 +79,10 @@ const {{ name }}Resolver = exports.{{ name }}Resolver = {
     },
     where: (table, args) => graphQLHelpers.buildConditionsByArgs(args),
     orderBy: (args) => graphQLHelpers.buildSqlOrderBy(args),
-    resolve: (parent, args, context, info) =>
+    resolve: (parent, args, context, info) => (
       joinMonster(info, context, sql => db.prepareExecute(sql + " FETCH FIRST 100 ROWS ONLY"), [])
+        .then(results => (Promise.resolve(graphQLHelpers.trimObj(results))))
+    )
   }
 }
 {% for relation in relations %}

@@ -63,6 +63,14 @@ exports.buildSqlOrderBy = (args) => {
       const [column, direction] = predicate.split(" ");
       acc[column] = direction;
 
-      return acc; 
+      return acc;
     }, {});
+};
+
+const trimObj = exports.trimObj = (obj) => {
+  if (!Array.isArray(obj) && typeof obj != 'object') return obj;
+  return Object.keys(obj).reduce(function (acc, key) {
+    acc[key.trim()] = typeof obj[key] == 'string' ? obj[key].trim() : trimObj(obj[key]);
+    return acc;
+  }, Array.isArray(obj) ? [] : {});
 };
