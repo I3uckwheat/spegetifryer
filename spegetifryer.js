@@ -3,7 +3,7 @@
 
 
 const nunjucks = require('nunjucks');
-const fs = require('fs');
+const fs = require('fs-extra')
 const path = require('path');
 const findConfig = require('find-config');
 
@@ -27,15 +27,24 @@ const config = require(configPath);
 
 const dependentRoot = path.parse(configPath).dir;
 
-
+const generatedPath = path.join(dependentRoot, config.outputPath, '.generated');
+fs.remove(generatedPath)
+  .then(() => {
 createOutputPath(config.outputPath);
 copyHelpersTo(path.join(dependentRoot, config.outputPath, '.generated'));
 
-const graphqlFilesContents = generateGraphqlFilesContents();
-writeGraphqlFiles(graphqlFilesContents);
+  const tableDetails = generateGraphqlFilesContents();
+  writeGraphqlFiles(tableDetails);
+
+  const tables = getGraphqlTableDetails();
+  writeTableColumnsFiles(tables);
 
 const schemaRoot = generateSchemaRoot();
 writeSchemaRoot(schemaRoot);
+})
+.catch(console.log);
+
+
 
 /*******************************************/
 
