@@ -15,6 +15,7 @@ const joinMonster = require('join-monster').default;
 const db = require('../db2Handler');
 const graphQLHelpers = require('../graphQLHelpers');
 const tableDependencies = {
+  self: require(path.join(__dirname, 'columns.json')),
   {%- for relation in relations %}
   {{ relation.table }}: require(path.join(__dirname, '..', '{{ relation.table }}', 'columns.json')),
   {%- endfor %}
@@ -22,13 +23,15 @@ const tableDependencies = {
 
 const customResolvers = require('../../{{ name }}/{{ name }}')(db);
 
-const fields = graphQLHelpers.buildColumnFields(JSON.parse(fs.readFileSync(path.join(__dirname, 'columns.json'))));
+const fields = graphQLHelpers.buildColumnFields(
+  JSON.parse(fs.readFileSync(path.join(__dirname, 'columns.json')))
+);
 
 const {{ name }} = exports.{{ name }} = new GraphQLObjectType({
   name: "{{ name }}",
   fields: () => ({
     ...fields,
-    {%- for relation in relations %}
+    {% for relation in relations %}
     {{ relation.table }}: {
       description: "{{ name }} description",
       type: {{ relation.returnType }},
@@ -52,9 +55,9 @@ const {{ name }} = exports.{{ name }} = new GraphQLObjectType({
           ? `{{ relation.joinOn }} AND ${userSuppliedJoinOn}`
           : "{{ relation.joinOn }}";
       },
-      {% endif %}
+      {%- endif %}
     },
-    {%- endfor %}
+    {% endfor %}
     ...customResolvers
   })
 })
@@ -71,9 +74,7 @@ const {{ name }}Resolver = exports.{{ name }}Resolver = {
     args: {
       where: { type: GraphQLString },
       by: { type: GraphQLString },
-      {%- for column, dataType in columns %}
-      {{ column }}: { type: {{ dataType }} },
-      {%- endfor %}
+      ...graphQLHelpers.getArgsByColumns(tableDependencies.self),
     },
     where: (table, args) => graphQLHelpers.buildConditionsByArgs(args),
     orderBy: (args) => graphQLHelpers.buildSqlOrderBy(args),
@@ -81,9 +82,8 @@ const {{ name }}Resolver = exports.{{ name }}Resolver = {
       joinMonster(info, context, sql => db.prepareExecute(sql + " FETCH FIRST 100 ROWS ONLY"), [])
   }
 }
-
-{%- for relation in relations %}
+{% for relation in relations %}
 const {
   {{ relation.table }}
-} = require('../{{ relation.table }}/{{ relation.table }}')
-{%- endfor %}
+} = require('../{{ relation.table }}/{{ relation.table }}');
+{% endfor %}
