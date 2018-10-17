@@ -30,8 +30,8 @@ const dependentRoot = path.parse(configPath).dir;
 const generatedPath = path.join(dependentRoot, config.outputPath, '.generated');
 fs.remove(generatedPath)
   .then(() => {
-createOutputPath(config.outputPath);
-copyHelpersTo(path.join(dependentRoot, config.outputPath, '.generated'));
+  createOutputPath(config.outputPath);
+  copyHelpersTo(path.join(dependentRoot, config.outputPath, '.generated'));
 
   const tableDetails = generateGraphqlFilesContents();
   writeGraphqlFiles(tableDetails);
@@ -39,8 +39,8 @@ copyHelpersTo(path.join(dependentRoot, config.outputPath, '.generated'));
   const tables = getGraphqlTableDetails();
   writeTableColumnsFiles(tables);
 
-const schemaRoot = generateSchemaRoot();
-writeSchemaRoot(schemaRoot);
+  const schemaRoot = generateSchemaRoot();
+  writeSchemaRoot(schemaRoot);
 })
 .catch(console.log);
 
@@ -55,7 +55,7 @@ function createOutputPath(outputPath) {
 
 function copyHelpersTo(graphqlRoot) {
   const helperFiles = fs.readdirSync(path.join(__dirname, 'assets', 'helpers'));
-  
+
   helperFiles.forEach((filename) => {
     const from = path.join(__dirname, 'assets', 'helpers', filename);
     const to = path.join(graphqlRoot, filename);
@@ -91,6 +91,27 @@ function writeGraphqlFiles(files) {
 
     makeAddonFiles(file.name);
   })
+}
+
+function getGraphqlTableDetails() {
+  return getTableNames().map(name => {
+    const tableDetailsPath = path.join(dependentRoot, config.tableDetailsPath, name);
+    const tableDetails = require(tableDetailsPath);
+    return {
+      name: tableDetails.name,
+      columns: tableDetails.columns
+    }
+  })
+}
+
+function writeTableColumnsFiles(tables) {
+  tables.forEach(table => {
+    const basePath = path.join(config.outputPath, '.generated', table.name);
+
+    fs.writeFile(path.join(basePath, 'columns.json'), JSON.stringify(table.columns), err => {
+      if (err) throw err;
+    });
+  });
 }
 
 function makeAddonFiles(fileName) {
