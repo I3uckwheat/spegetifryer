@@ -7,18 +7,22 @@ const {
   GraphQLString,
 } = require('graphql');
 
+const fs = require('fs');
+const path = require('path');
+
 const joinMonster = require('join-monster').default;
 
 const db = require('../db2Handler');
 const graphQLHelpers = require('../graphQLHelpers');
+const tableDependencies = {
+  {%- for relation in relations %}
+  {{ relation.table }}: require(path.join(__dirname, '..', '{{ relation.table }}', 'columns.json')),
+  {%- endfor %}
+};
 
 const customResolvers = require('../../{{ name }}/{{ name }}')(db);
 
-const fields = graphQLHelpers.buildColumnFields({
-  {%- for column, dataType in columns %}
-  {{ column }}: "{{ dataType }}",
-  {%- endfor %}
-});
+const fields = graphQLHelpers.buildColumnFields(JSON.parse(fs.readFileSync(path.join(__dirname, 'columns.json'))));
 
 const {{ name }} = exports.{{ name }} = new GraphQLObjectType({
   name: "{{ name }}",
@@ -28,6 +32,7 @@ const {{ name }} = exports.{{ name }} = new GraphQLObjectType({
     {{ relation.table }}: {
       description: "{{ name }} description",
       type: {{ relation.returnType }},
+      args: graphQLHelpers.getArgsByColumns(tableDependencies.{{ relation.table }}),
       {%- if relation.junction %}
       junction: {
         sqlTable: '{{ relation.junction.junctionTable }}',
@@ -39,7 +44,14 @@ const {{ name }} = exports.{{ name }} = new GraphQLObjectType({
         ],
       },
       {% else %}
-      sqlJoin: ({{ name }}Table, {{ relation.table }}Table, args) => "{{ relation.joinOn }}",
+      sqlJoin: ({{ name }}Table, {{ relation.table }}Table, args) => {
+        const userSuppliedJoinOn = graphQLHelpers.buildConditionsByArgs(args);
+
+        // if a user supplied args on the JOIN table, tack those on
+        return userSuppliedJoinOn
+          ? `{{ relation.joinOn }} AND ${userSuppliedJoinOn}`
+          : "{{ relation.joinOn }}";
+      },
       {% endif %}
     },
     {%- endfor %}
