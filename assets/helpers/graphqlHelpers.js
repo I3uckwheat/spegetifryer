@@ -19,7 +19,14 @@ exports.buildColumnFields = (columns) => {
       type: typeCrossReference[dataType],
     };
     return acc;
-  }, {})
+  }, {});
+};
+
+exports.getArgsByColumns = (columns) => {
+  return Object.entries(columns).reduce((acc, [column, type]) => {
+    acc[column] = { type: typeCrossReference[type] };
+    return acc;
+  }, {});
 }
 
 /**
@@ -45,7 +52,7 @@ exports.buildConditionsByArgs = (args) => {
     })
     // turn the array into a string of conditions
     .join(" AND ");
-}
+};
 
 exports.buildSqlOrderBy = (args) => {
   if (!args.by) return null;
@@ -58,4 +65,4 @@ exports.buildSqlOrderBy = (args) => {
 
       return acc; 
     }, {});
-}
+};
